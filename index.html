@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Corporate Meeting Room Booking</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* --- 1. Global & Main Layout --- */
+      :root {
+        --primary: #4f46e5;
+        --primary-hover: #4338ca;
+        --success: #10b981;
+        --danger: #ef4444;
+        --text-main: #1e293b;
+        --bg-body: #f1f5f9;
+        --card-bg: #ffffff;
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      body {
+        font-family: "Kanit", sans-serif;
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        margin: 0;
+        padding: 40px 20px;
+      }
+
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 50px;
+      }
+      header h1 {
+        font-size: 2.5rem;
+        color: var(--primary);
+        margin-bottom: 10px;
+      }
+
+      .room-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 25px;
+      }
+
+      .room-card {
+        background: var(--card-bg);
+        border-radius: 20px;
+        padding: 30px;
+        min-height: 320px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .room-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+      .room-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 8px;
+      }
+      .room-card.available::before {
+        background-color: var(--success);
+      }
+      .room-card.busy::before {
+        background-color: var(--danger);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 14px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-bottom: 20px;
+        width: fit-content;
+      }
+      .available .badge {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .busy .badge {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+
+      button {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition);
+        font-family: "Kanit", sans-serif;
+        margin-top: auto;
+      }
+      .btn-book {
+        background: var(--primary);
+        color: white;
+      }
+      .btn-book:hover {
+        background: var(--primary-hover);
+      }
+      .btn-cancel {
+        background: white;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+      }
+      .btn-cancel:hover {
+        background: var(--danger);
+        color: white;
+      }
+
+      .info-box {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-left: 4px solid var(--danger);
+        font-size: 0.9rem;
+      }
+
+      /* --- 2. Modal Styles --- */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+      }
+
+      .modal-box {
+        background: white;
+        padding: 25px;
+        border-radius: 20px;
+        width: 90%;
+        max-width: 420px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: slideIn 0.3s ease-out;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateY(20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .modal-header {
+        margin-bottom: 15px;
+        text-align: center;
+      }
+      .modal-header h2 {
+        margin: 0;
+        color: var(--primary);
+      }
+      .modal-header p {
+        margin: 5px 0 0;
+        color: #64748b;
+        font-size: 0.9rem;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #334155;
+      }
+      .form-group input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-family: "Kanit", sans-serif;
+        box-sizing: border-box;
+      }
+
+      /* Styles for Time Range Inputs */
+      .time-range-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .time-select {
+        flex: 1;
+        padding: 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-family: "Kanit", sans-serif;
+        background-color: white;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 16px;
+      }
+
+      .time-range-group span {
+        color: #64748b;
+        font-size: 0.9rem;
+        white-space: nowrap;
+      }
+
+      /* --- 3. CUSTOM CALENDAR STYLES --- */
+      .calendar-wrapper {
+        background-color: #ffffff;
+        color: var(--text-main);
+        padding: 20px;
+        border-radius: 16px;
+        margin-bottom: 15px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: var(--primary);
+      }
+
+      .cal-nav-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;      /* ← ทำให้เป็นวงกลม */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+}
+
+.cal-nav-btn:hover {
+  background-color: #f1f5f9;
+  color: var(--primary);
+}
+
+
+      .calendar-days-header {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        margin-bottom: 10px;
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 500;
+      }
+
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 5px;
+        text-align: center;
+      }
+
+      .cal-date {
+        padding: 10px 0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 0.95rem;
+        color: var(--text-main);
+      }
+
+      .cal-date:hover:not(.disabled):not(.selected) {
+        background-color: #f1f5f9;
+        color: var(--primary);
+      }
+
+      .cal-date.selected {
+        background-color: var(--primary);
+        color: white;
+        font-weight: bold;
+        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4);
+      }
+
+      .cal-date.disabled {
+        color: #cbd5e1;
+        cursor: not-allowed;
+        background-color: transparent;
+      }
+
+      .cal-date.today {
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      .modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .btn-confirm {
+        background: var(--primary);
+        color: white;
+      }
+      .btn-close {
+        background: #e2e8f0;
+        color: #475569;
+      }
+
+      /* ===== History Section ===== */
+      .history-section {
+        margin-top: 50px;
+      }
+
+      .history-title {
+        font-size: 1.4rem;
+        color: #2563eb;
+        margin-bottom: 15px;
+      }
+
+      /* ===== Table Wrapper ===== */
+      .table-wrapper {
+        overflow-x: auto;
+        background: #ffffff;
+        border-radius: 14px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      }
+
+      /* ===== Table ===== */
+      .history-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 700px;
+      }
+
+      /* ===== Header ===== */
+      .history-table thead {
+        background: linear-gradient(135deg, #e0e7ff, #f8fafc);
+      }
+
+      .history-table th {
+        padding: 14px 12px;
+        text-align: center;
+        font-weight: 600;
+        color: #1e3a8a;
+        border-bottom: 2px solid #c7d2fe;
+      }
+
+      /* ===== Body ===== */
+      .history-table td {
+        padding: 12px;
+        text-align: center;
+        color: #334155;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 0.95rem;
+      }
+
+      /* ===== Hover ===== */
+      .history-table tbody tr:hover {
+        background: #f1f5ff;
+        transition: 0.2s;
+      }
+
+      /* ===== Last Row ===== */
+      .history-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+      /* ===== Mini Floating Admin Button ===== */
+      .admin-fab {
+        position: fixed;
+        bottom: 22px;
+        right: 22px;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: none;
+        background: #1e40af;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        box-shadow: 0 8px 20px rgba(30, 64, 175, 0.35);
+        z-index: 2000;
+        transition: all 0.25s ease;
+      }
+
+      .admin-fab:hover {
+        background: #1d4ed8;
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 12px 24px rgba(30, 64, 175, 0.45);
+      }
+
+      .admin-fab:active {
+        transform: scale(0.95);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>ระบบจองห้องประชุมภายในองค์กร</h1>
+      </header>
+
+      <div class="room-grid" id="roomContainer"></div>
+      <hr style="margin: 60px 0" />
+
+      <section class="history-section">
+        <h2 class="history-title">ประวัติการจองห้องประชุม</h2>
+
+        <div id="adminControls" style="margin-bottom: 15px; display: none">
+          <button
+            onclick="clearHistory()"
+            class="btn-cancel"
+            style="width: auto"
+          >
+            🗑 ล้างประวัติทั้งหมด
+          </button>
+          <button
+            onclick="resetAllRooms()"
+            class="btn-cancel"
+            style="width: auto"
+          >
+            ♻️ คืนห้องทั้งหมด
+          </button>
+          <button onclick="logoutAdmin()" class="btn-close" style="width: auto">
+            ออกจากระบบ
+          </button>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="history-table" id="historyTable">
+            <thead>
+              <tr>
+                <th>ห้อง</th>
+                <th>ผู้จอง</th>
+                <th>วันที่</th>
+                <th>เวลา</th>
+                <th>วันที่ทำรายการ</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-overlay" id="bookingModal">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2 id="modalRoomName">ชื่อห้อง...</h2>
+          <p>กรุณาระบุรายละเอียดการจอง</p>
+        </div>
+
+        <div class="form-group">
+          <label>ชื่อผู้จอง</label>
+          <input type="text" id="inputName" placeholder="เช่น แผนก IT" />
+        </div>
+
+        <label
+          style="
+            font-weight: 500;
+            color: #334155;
+            margin-bottom: 8px;
+            display: block;
+          "
+          >วันที่จอง (เลือกได้ไม่เกิน 14 วัน)</label
+        >
+        <div class="calendar-wrapper">
+          <div class="calendar-header">
+            <button class="cal-nav-btn" onclick="changeMonth(-1)">
+              &#10094;
+            </button>
+            <span id="monthYearLabel">มกราคม 2569</span>
+            <button class="cal-nav-btn" onclick="changeMonth(1)">
+              &#10095;
+            </button>
+          </div>
+          <div class="calendar-days-header">
+            <div>อา</div>
+            <div>จ</div>
+            <div>อ</div>
+            <div>พ</div>
+            <div>พฤ</div>
+            <div>ศ</div>
+            <div>ส</div>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+        <input type="hidden" id="selectedDateValue" />
+
+        <div class="form-group">
+          <label>ช่วงเวลาที่ใช้งาน (เริ่ม - สิ้นสุด)</label>
+          <div class="time-range-group">
+            <select
+              id="startTime"
+              class="time-select"
+              onchange="updateEndTimeSelect()"
+            >
+              <option value="" disabled selected>เวลาเริ่ม</option>
+            </select>
+            <span>ถึง</span>
+            <select id="endTime" class="time-select">
+              <option value="" disabled selected>เวลาสิ้นสุด</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-close" onclick="closeModal()">ยกเลิก</button>
+          <button class="btn-confirm" onclick="confirmBooking()">
+            ยืนยันการจอง
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="adminModal">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2>Admin Login</h2>
+          <p>เฉพาะผู้ดูแลระบบ</p>
+        </div>
+
+        <div class="form-group">
+          <label>รหัสผ่าน</label>
+          <input
+            type="password"
+            id="adminPassword"
+            placeholder="Admin Password"
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-close" onclick="closeAdminLogin()">ยกเลิก</button>
+          <button class="btn-confirm" onclick="loginAdmin()">
+            เข้าสู่ระบบ
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // --- Data ---
+      const defaultRooms = [
+        {
+          id: 1,
+          name: "ห้องประชุม 1",
+          capacity: 12,
+          status: "available",
+          user: "",
+          date: "",
+          time: "",
+        },
+        {
+          id: 2,
+          name: "ห้องประชุม 2",
+          capacity: 6,
+          status: "available",
+          user: "",
+          date: "",
+          time: "",
+        },
+        {
+          id: 3,
+          name: "ห้องประชุม 3",
+          capacity: 4,
+          status: "available",
+          user: "",
+          date: "",
+          time: "",
+        },
+        {
+          id: 4,
+          name: "ห้องประชุม 4",
+          capacity: 30,
+          status: "available",
+          user: "",
+          date: "",
+          time: "",
+        },
+        {
+          id: 5,
+          name: "ห้องประชุม 5",
+          capacity: 2,
+          status: "available",
+          user: "",
+          date: "",
+          time: "",
+        },
+        {
+          id: 6,
+          name: "ห้องประชุม 6",
+          capacity: 20,
+          status: "available",
+          user: "",
+          date: "",
+          time: "",
+        },
+      ];
+
+      let rooms =
+        JSON.parse(localStorage.getItem("meetingRooms")) || defaultRooms;
+
+      // Validate Data Integrity
+      if (rooms.length < 6 || !rooms[0].hasOwnProperty("date")) {
+        rooms = defaultRooms;
+        localStorage.removeItem("meetingRooms");
+      }
+
+      let bookingHistory =
+        JSON.parse(localStorage.getItem("bookingHistory")) || [];
+      let currentBookingRoomId = null;
+
+      // --- Admin Config ---
+      const ADMIN_PASSWORD = "123";
+      let isAdmin = localStorage.getItem("isAdmin") === "true";
+
+      // --- Calendar State ---
+      let currentCalDate = new Date();
+      let selectedDateObj = null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+    
+
+      const maxBookingDate = new Date(today);
+      maxBookingDate.setDate(today.getDate() + 14);
+
+      // จำกัดเดือนที่ดูได้ (เดือนปัจจุบัน และเดือนถัดไป)
+    const minMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const maxMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+
+      // --- Time Configuration ---
+      const startOfficeHour = 8;
+      const endOfficeHour = 20;
+
+      function populateStartTimeSelect() {
+        const startSelect = document.getElementById("startTime");
+        startSelect.innerHTML =
+          '<option value="" disabled selected>เวลาเริ่ม</option>';
+        for (let h = startOfficeHour; h < endOfficeHour; h++) {
+          const timeStr = `${h.toString().padStart(2, "0")}:00`;
+          startSelect.innerHTML += `<option value="${timeStr}">${timeStr} น.</option>`;
+        }
+      }
+
+      function updateEndTimeSelect() {
+        const startSelect = document.getElementById("startTime");
+        const endSelect = document.getElementById("endTime");
+        const selectedStart = startSelect.value;
+        endSelect.innerHTML =
+          '<option value="" disabled selected>เวลาสิ้นสุด</option>';
+
+        if (!selectedStart) return;
+
+        const startHourInt = parseInt(selectedStart.split(":")[0]);
+        for (let h = startHourInt + 1; h <= endOfficeHour; h++) {
+          const timeStr = `${h.toString().padStart(2, "0")}:00`;
+          endSelect.innerHTML += `<option value="${timeStr}">${timeStr} น.</option>`;
+        }
+      }
+
+      populateStartTimeSelect();
+
+      // --- Render Rooms ---
+      function renderRooms() {
+        const container = document.getElementById("roomContainer");
+        container.innerHTML = "";
+
+        rooms.forEach((room) => {
+          const isAvailable = room.status === "available";
+          const card = document.createElement("div");
+          card.className = `room-card ${room.status}`;
+
+          let displayDate = room.date;
+          if (room.date) {
+            const d = new Date(room.date);
+            displayDate = d.toLocaleDateString("th-TH", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            });
+          }
+
+          card.innerHTML = `
+                <div>
+                    <div class="badge">${isAvailable ? "● ว่างพร้อมใช้งาน" : "● ไม่ว่าง"}</div>
+                    <h2 style="margin: 0 0 5px 0; font-size: 1.5rem;">${room.name}</h2>
+                    <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">
+                        <span style="font-size:1.2rem">👥</span> รองรับ: ${room.capacity} ท่าน
+                    </p>
+                    
+                    ${
+                      !isAvailable
+                        ? `
+                        <div class="info-box">
+                            <strong>ผู้จอง:</strong> ${room.user}<br>
+                            <strong>วันที่:</strong> ${displayDate}<br>
+                            <strong>เวลา:</strong> ${room.time} น.
+                        </div>
+                    `
+                        : ""
+                    }
+                </div>
+
+                ${
+                  isAvailable
+                    ? `
+                    <button class="btn-book" onclick="openModal(${room.id})">จองห้องนี้</button>
+                `
+                    : `
+                    <button class="btn-cancel" onclick="cancelBooking(${room.id})">ยกเลิก/คืนห้อง</button>
+                `
+                }
+            `;
+          container.appendChild(card);
+        });
+        localStorage.setItem("meetingRooms", JSON.stringify(rooms));
+      }
+
+      // --- Calendar Logic ---
+      function renderCalendar() {
+        const year = currentCalDate.getFullYear();
+        const month = currentCalDate.getMonth();
+        const monthsTH = [
+          "มกราคม",
+          "กุมภาพันธ์",
+          "มีนาคม",
+          "เมษายน",
+          "พฤษภาคม",
+          "มิถุนายน",
+          "กรกฎาคม",
+          "สิงหาคม",
+          "กันยายน",
+          "ตุลาคม",
+          "พฤศจิกายน",
+          "ธันวาคม",
+        ];
+
+        document.getElementById("monthYearLabel").innerText =
+          `${monthsTH[month]} ${year + 543}`;
+
+        const grid = document.getElementById("calendarGrid");
+        grid.innerHTML = "";
+
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        for (let i = 0; i < firstDayIndex; i++) {
+          const emptyCell = document.createElement("div");
+          grid.appendChild(emptyCell);
+        }
+
+        for (let i = 1; i <= daysInMonth; i++) {
+          const dateEl = document.createElement("div");
+          dateEl.innerText = i;
+          dateEl.className = "cal-date";
+
+          const thisDate = new Date(year, month, i);
+          thisDate.setHours(0, 0, 0, 0);
+
+          if (thisDate.getTime() === today.getTime()) {
+            dateEl.classList.add("today");
+          }
+
+          if (
+            selectedDateObj &&
+            thisDate.getTime() === selectedDateObj.getTime()
+          ) {
+            dateEl.classList.add("selected");
+          }
+
+          if (thisDate < today || thisDate > maxBookingDate) {
+            dateEl.classList.add("disabled");
+          } else {
+            dateEl.onclick = () => selectDate(thisDate);
+          }
+
+          grid.appendChild(dateEl);
+        }
+        const prevBtn = document.querySelector(".cal-nav-btn:first-child");
+const nextBtn = document.querySelector(".cal-nav-btn:last-child");
+
+prevBtn.disabled =
+  currentCalDate.getFullYear() === minMonth.getFullYear() &&
+  currentCalDate.getMonth() === minMonth.getMonth();
+
+nextBtn.disabled =
+  currentCalDate.getFullYear() === maxMonth.getFullYear() &&
+  currentCalDate.getMonth() === maxMonth.getMonth();
+
+prevBtn.style.opacity = prevBtn.disabled ? "0.3" : "1";
+nextBtn.style.opacity = nextBtn.disabled ? "0.3" : "1";
+
+      }
+
+      function changeMonth(step) {
+  const newDate = new Date(
+    currentCalDate.getFullYear(),
+    currentCalDate.getMonth() + step,
+    1
+  );
+
+  // ❌ ถ้าอยู่นอกช่วง ไม่ให้เลื่อน
+  if (newDate < minMonth || newDate > maxMonth) {
+    return;
+  }
+
+  currentCalDate = newDate;
+  renderCalendar();
+}
+
+
+      function selectDate(date) {
+        selectedDateObj = date;
+        const offset = date.getTimezoneOffset() * 60000;
+        const localISOTime = new Date(date - offset).toISOString().slice(0, 10);
+        document.getElementById("selectedDateValue").value = localISOTime;
+        renderCalendar();
+      }
+
+      // --- Admin Logic ---
+      function openAdminLogin() {
+        document.getElementById("adminModal").style.display = "flex";
+      }
+
+      function closeAdminLogin() {
+        document.getElementById("adminModal").style.display = "none";
+      }
+
+      function loginAdmin() {
+        const pass = document.getElementById("adminPassword").value;
+        if (pass === ADMIN_PASSWORD) {
+          isAdmin = true;
+          localStorage.setItem("isAdmin", "true");
+          closeAdminLogin();
+          alert("เข้าสู่ระบบ Admin สำเร็จ");
+          renderHistory();
+        } else {
+          alert("รหัสผ่านไม่ถูกต้อง");
+        }
+      }
+
+      function logoutAdmin() {
+        isAdmin = false;
+        localStorage.removeItem("isAdmin");
+        renderHistory();
+      }
+
+      // --- Booking Logic ---
+      function openModal(id) {
+        const room = rooms.find((r) => r.id === id);
+        currentBookingRoomId = id;
+
+        document.getElementById("modalRoomName").innerText = room.name;
+        document.getElementById("inputName").value = "";
+        document.getElementById("startTime").selectedIndex = 0;
+
+        const endSelect = document.getElementById("endTime");
+        endSelect.innerHTML =
+          '<option value="" disabled selected>เวลาสิ้นสุด</option>';
+        document.getElementById("selectedDateValue").value = "";
+
+        selectedDateObj = null;
+        currentCalDate = new Date();
+        renderCalendar();
+
+        document.getElementById("bookingModal").style.display = "flex";
+      }
+
+      function closeModal() {
+        document.getElementById("bookingModal").style.display = "none";
+        currentBookingRoomId = null;
+      }
+
+      function confirmBooking() {
+        if (!currentBookingRoomId) return;
+
+        const name = document.getElementById("inputName").value;
+        const dateStr = document.getElementById("selectedDateValue").value;
+        const start = document.getElementById("startTime").value;
+        const end = document.getElementById("endTime").value;
+
+        if (!name || !dateStr || !start || !end) {
+          alert("กรุณากรอกข้อมูลให้ครบถ้วน (ชื่อ, วันที่, และช่วงเวลา)");
+          return;
+        }
+
+        const index = rooms.findIndex((r) => r.id === currentBookingRoomId);
+        rooms[index].status = "busy";
+        rooms[index].user = name;
+        rooms[index].date = dateStr;
+        rooms[index].time = `${start} - ${end}`;
+
+        bookingHistory.push({
+          roomId: rooms[index].id,
+          roomName: rooms[index].name,
+          user: name,
+          date: dateStr,
+          time: `${start} - ${end}`,
+          createdAt: new Date().toLocaleString("th-TH"),
+        });
+
+        localStorage.setItem("bookingHistory", JSON.stringify(bookingHistory));
+        renderRooms();
+        renderHistory();
+        closeModal();
+      }
+
+      function cancelBooking(id) {
+        if (!confirm("ยืนยันการยกเลิกจองห้องนี้?")) return;
+
+        const index = rooms.findIndex((r) => r.id === id);
+        const room = rooms[index];
+
+        // ลบเฉพาะรายการล่าสุดของห้องนี้ที่ตรงกัน (ถ้าต้องการ)
+        // หรือถ้าอยากเก็บ History ไว้แต่เปลี่ยนสถานะ ก็ไม่ต้องลบจาก bookingHistory
+        // แต่ในที่นี้เราแค่คืนห้องเฉยๆ
+
+        room.status = "available";
+        room.user = "";
+        room.date = "";
+        room.time = "";
+
+        localStorage.setItem("meetingRooms", JSON.stringify(rooms));
+        renderRooms();
+        // ถ้าต้องการลบ history ด้วย ก็ทำได้ แต่ปกติ History ควรเก็บไว้ดูย้อนหลัง
+        // renderHistory();
+      }
+
+      // --- Admin Actions on History ---
+
+      // ✨ 3. ฟังก์ชันใหม่สำหรับลบข้อมูลโดยเช็ค Data
+      function deleteHistoryByData(roomId, user, date, time) {
+        if (!confirm("ลบประวัติรายการนี้?")) return;
+
+        bookingHistory = bookingHistory.filter(
+          (h) =>
+            !(
+              h.roomId == roomId &&
+              h.user === user &&
+              h.date === date &&
+              h.time === time
+            ),
+        );
+
+        localStorage.setItem("bookingHistory", JSON.stringify(bookingHistory));
+        renderHistory();
+      }
+
+      function clearHistory() {
+        if (!confirm("ล้างประวัติทั้งหมด?")) return;
+        bookingHistory = [];
+        localStorage.setItem("bookingHistory", "[]");
+        renderHistory();
+      }
+
+      function resetAllRooms() {
+        if (!confirm("คืนห้องทุกห้อง?")) return;
+        rooms.forEach((r) => {
+          r.status = "available";
+          r.user = "";
+          r.date = "";
+          r.time = "";
+        });
+        localStorage.setItem("meetingRooms", JSON.stringify(rooms));
+        renderRooms();
+      }
+
+      // --- Render History ---
+      function renderHistory() {
+        const tbody = document.querySelector("#historyTable tbody");
+        tbody.innerHTML = "";
+
+        if (bookingHistory.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align:center; padding:20px; color:#64748b;">
+                    ยังไม่มีประวัติการจอง
+                </td>
+            </tr>
+        `;
+          document.getElementById("adminControls").style.display = isAdmin
+            ? "block"
+            : "none";
+          return;
+        }
+
+        // เรียงลำดับจากใหม่ไปเก่า (Reverse)
+        const reversedHistory = bookingHistory.slice().reverse();
+
+        reversedHistory.forEach((h) => {
+          const d = new Date(h.date);
+          const displayDate = d.toLocaleDateString("th-TH", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          });
+
+          // ✨ 2. แก้ไขส่วนสร้างปุ่มลบ ให้เรียก deleteHistoryByData
+          tbody.innerHTML += `
+            <tr>
+              <td>${h.roomName}</td>
+              <td>${h.user}</td>
+              <td>${displayDate}</td>
+              <td>${h.time} น.</td>
+              <td>
+                ${h.createdAt}
+                ${
+                  isAdmin
+                    ? `<br><button 
+                        onclick="deleteHistoryByData('${h.roomId}', '${h.user}', '${h.date}', '${h.time}')"
+                        style="margin-top:5px;font-size:0.8rem;color:#dc2626;border:none;background:none;cursor:pointer;width:auto;">
+                        ลบ
+                      </button>`
+                    : ""
+                }
+              </td>
+            </tr>
+          `;
+        });
+
+        // ✨ 4. ควบคุมการแสดงผล Admin Panel
+        document.getElementById("adminControls").style.display = isAdmin
+          ? "block"
+          : "none";
+      }
+
+      // Event Listeners
+      document
+        .getElementById("bookingModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) closeModal();
+        });
+
+      // Init
+      renderRooms();
+      renderHistory();
+    </script>
+    <button class="admin-fab" onclick="openAdminLogin()" title="Admin">
+      👨🏻‍💼
+    </button>
+  </body>
+</html>
