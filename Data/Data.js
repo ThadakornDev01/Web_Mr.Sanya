@@ -131,7 +131,7 @@ if (form) {
         alert(result.message);
         if (result.success) {
           form.reset();
-          setTimeout(() => window.location.href = 'login.html', 1500);
+          setTimeout(() => window.location.href = 'Login.html', 1500);
         } else {
           btn.innerText = originalText;
           btn.disabled = false;
