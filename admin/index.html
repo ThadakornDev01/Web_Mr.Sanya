@@ -6,74 +6,7 @@
     <title>Admin Dashboard - Account Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
-    <style>
-        :root {
-            --primary: #1e40af; /* สีน้ำเงินเข้มสำหรับ Admin */
-            --danger: #ef4444;
-            --bg-body: #f1f5f9;
-        }
-        body {
-            font-family: 'Kanit', sans-serif;
-            background-color: var(--bg-body);
-            margin: 0;
-            padding: 0;
-        }
-        /* Navbar ของ Admin */
-        .admin-nav {
-            background-color: var(--primary);
-            color: white;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        .admin-nav button {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: 'Kanit', sans-serif;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 40px auto;
-            padding: 20px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-        }
-        /* ตารางจัดการ User */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        th {
-            background-color: #f8fafc;
-            color: #334155;
-        }
-        .btn-delete {
-            background: #fee2e2;
-            color: #ef4444;
-            border: 1px solid #fecaca;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .btn-delete:hover {
-            background: #ef4444;
-            color: white;
-        }
-    </style>
+    <link rel="stylesheet" href="./admin.css">
 
     <script>
         // 🔒 ดักการเข้าถึง: เช็คว่าเป็น Admin หรือไม่?
@@ -131,7 +64,7 @@
 
     <script>
 // ⚠️ เอา URL จาก Apps Script มาวางตรงนี้!
-const scriptURL = 'ใส่_URL_APPS_SCRIPT_ของคุณตรงนี้';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbwVbfFQ_hsGmDksTlg4PRKkfXYk7X8lufaLyiBZTxyNy_8W66RZb55w8A7xmpxnZ9ggrQ/exec';
 
 // ฟังก์ชันดึงข้อมูลผู้ใช้มาแสดงในตาราง
 async function loadUsers() {
@@ -150,20 +83,30 @@ async function loadUsers() {
             return;
         }
 
-        // วนลูปสร้างตารางทีละคน
+// วนลูปสร้างตารางทีละคน
         users.forEach((user, index) => {
-            // เช็คว่าถ้าเป็น Admin (พาสเวิร์ด 123) ไม่ต้องแสดงปุ่มลบ
             const isSystemAdmin = user.email === 'admin'; 
             
+            // ดึงค่าเวลา (รองรับทั้ง Timestamp พิมพ์ใหญ่และพิมพ์เล็ก)
+            const timeData = user.Timestamp || user.timestamp;
+            let displayTime = '-';
+            
+            if (timeData) {
+                const d = new Date(timeData);
+                // จัดฟอร์แมตให้โชว์ วัน/เดือน/ปี ชั่วโมง:นาที
+                displayTime = d.toLocaleDateString('th-TH') + ' ' + 
+                              d.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}) + ' น.';
+            }
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${index + 1}</td>
                 <td>${user.firstname} ${user.lastname}</td>
                 <td>${user.email}</td>
-                <td>${user.Timestamp ? new Date(user.Timestamp).toLocaleDateString('th-TH') : '-'}</td>
+                <td>${displayTime}</td>
                 <td>
                     ${!isSystemAdmin ? 
-                        `<button class="btn-delete" onclick="deleteUser('${user.email}')">🗑️ ลบผู้ใช้</button>` 
+                        `<button class="btn-delete" onclick="deleteUser('${user.email}')">🗑️ ลบ</button>` 
                         : '<span style="color:#1e40af; font-weight:bold;">⭐ ผู้ดูแลระบบ</span>'}
                 </td>
             `;
