@@ -37,7 +37,27 @@ class UserManager {
   }
 
   // ตรวจสอบ login
-  login(email, password) {
+  // ดึงรายการผู้ใช้จาก Google Apps Script (อัปเดต local storage)
+  async fetchUsers() {
+    try {
+      const res = await fetch(`${scriptURL}?action=getUsers`);
+      if (!res.ok) throw new Error('Network response was not ok');
+      const data = await res.json();
+      // ถ้าได้ข้อมูล ให้อัปเดตรายการผู้ใช้และบันทึกลง localStorage
+      if (Array.isArray(data)) {
+        this.users = data;
+        this.saveUsers();
+      }
+      return { success: true };
+    } catch (err) {
+      console.warn('fetchUsers failed, using local users:', err);
+      return { success: false, error: err };
+    }
+  }
+
+  // ตรวจสอบ login (ตอนนี้เป็น async เพื่อให้แน่ใจว่าใช้รายการผู้ใช้ปัจจุบันจากเซิร์ฟเวอร์)
+  async login(email, password) {
+    await this.fetchUsers();
     const user = this.users.find(u => u.email === email && u.password === password);
     if (user) {
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -77,7 +97,7 @@ if (form) {
                       !form.querySelector('input[name="firstname"]');
   const isRegisterPage = form.querySelector('input[name="firstname"]') !== null;
 
-  form.addEventListener('submit', e => {
+  form.addEventListener('submit', async e => {
     e.preventDefault();
     const btn = form.querySelector('.submit');
     const originalText = btn.innerText;
@@ -127,7 +147,7 @@ if (form) {
         }
 
         // ลงทะเบียน
-        const result = userManager.register(firstname, lastname, email, password);
+        const result = await userManager.register(firstname, lastname, email, password);
         alert(result.message);
         if (result.success) {
           form.reset();
@@ -149,7 +169,7 @@ if (form) {
           return;
         }
 
-        const result = userManager.login(email, password);
+        const result = await userManager.login(email, password);
         alert(result.message);
         if (result.success) {
           form.reset();
