@@ -41,6 +41,65 @@
         });
     </script>
     
-    <script src="Data/Data.js"></script>
+    <!-- ใช้สคริปต์ล็อกอินแบบส่งไปยัง Apps Script โดยตรง
+         เปลี่ยนค่า scriptURL เป็น URL ที่ได้จากการ Deploy ใหม่ของคุณ -->
+    <script>
+        // ใส่ URL ของ Apps Script ที่ Deploy รอบใหม่ตรงนี้
+        const scriptURL = 'ใส่_URL_APPS_SCRIPT_อันใหม่ตรงนี้';
+
+        const loginForm = document.querySelector('.form');
+        const submitBtn = document.querySelector('.submit');
+
+        if (loginForm && submitBtn) {
+            loginForm.addEventListener('submit', e => {
+                e.preventDefault(); // กันหน้าเว็บรีเฟรช
+
+                // เปลี่ยนปุ่มเป็นสถานะกำลังโหลด
+                const originalText = submitBtn.innerText;
+                submitBtn.innerText = 'กำลังตรวจสอบข้อมูล...';
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.7';
+
+                // เตรียมข้อมูลส่งไปให้ Apps Script
+                const formData = new FormData(loginForm);
+                formData.append('action', 'login'); // บอกหลังบ้านว่านี่คือคำสั่ง login
+
+                // สำหรับ Admin Bypass (ถ้ากรอก admin / 123 เข้าหน้าแอดมินเลยไม่ต้องรอโหลด)
+                if (formData.get('email') === 'admin' && formData.get('password') === '123') {
+                    sessionStorage.setItem('isAdmin', 'true');
+                    window.location.href = 'admin/index.html';
+                    return;
+                }
+
+                // ยิงข้อมูลไปถาม Google Sheets
+                fetch(scriptURL, { method: 'POST', body: formData })
+                    .then(response => response.json()) // รับค่ากลับมาเป็น JSON
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // ล็อกอินสำเร็จ เก็บข้อมูลชื่อลง sessionStorage
+                            sessionStorage.setItem('currentUser', JSON.stringify(data.user));
+                            
+                            // แจ้งเตือนสำเร็จ
+                            alert('เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับคุณ ' + (data.user.firstname || data.user.email));
+                            // ดีดไปหน้าจองห้อง
+                            window.location.href = 'index.html';
+                        } else {
+                            // รหัสหรืออีเมลผิด โชว์ข้อความที่หลังบ้านส่งมา
+                            alert('❌ ' + (data.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'));
+                            submitBtn.innerText = originalText;
+                            submitBtn.disabled = false;
+                            submitBtn.style.opacity = '1';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('❌ ระบบขัดข้อง ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
+                        submitBtn.innerText = originalText;
+                        submitBtn.disabled = false;
+                        submitBtn.style.opacity = '1';
+                    });
+            });
+        }
+    </script>
 </body>
 </html>
