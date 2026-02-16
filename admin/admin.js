@@ -75,6 +75,49 @@ function doPost(e) {
     }
   }
 
+  // --- ระบบล็อกอิน (ตอบกลับเป็น JSON) ---
+  if (action === 'login') {
+    var email = (e.parameter.email || '').toString().toLowerCase();
+    var password = e.parameter.password || '';
+
+    if (!email) {
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Email ไม่ถูกต้อง' }))
+                           .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var emailColIndex = findColumnIndex(sheet, 'email');
+    var pwdColIndex = findColumnIndex(sheet, 'password');
+
+    if (emailColIndex === -1) {
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'ไม่พบคอลัมน์ email' }))
+                           .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    for (var i = 1; i < data.length; i++) {
+      var rowEmail = (data[i][emailColIndex] || '').toString().toLowerCase();
+      if (rowEmail === email) {
+        var storedPwd = pwdColIndex !== -1 ? (data[i][pwdColIndex] || '').toString() : '';
+        if (storedPwd === password) {
+          // สร้าง user object จาก headers
+          var user = {};
+          for (var j = 0; j < headers.length; j++) {
+            user[headers[j]] = data[i][j];
+          }
+          return ContentService.createTextOutput(JSON.stringify({ status: 'success', user: user }))
+                               .setMimeType(ContentService.MimeType.JSON);
+        } else {
+          return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'รหัสผ่านไม่ถูกต้อง' }))
+                               .setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'ไม่พบผู้ใช้งาน' }))
+                         .setMimeType(ContentService.MimeType.JSON);
+  }
+
   // --- ระบบสมัครสมาชิก (โค้ดเดิมของคุณ) ---
   if (!action || action === 'register') {
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];

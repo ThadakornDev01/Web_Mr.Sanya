@@ -45,7 +45,7 @@
          เปลี่ยนค่า scriptURL เป็น URL ที่ได้จากการ Deploy ใหม่ของคุณ -->
     <script>
         // ใส่ URL ของ Apps Script ที่ Deploy รอบใหม่ตรงนี้
-        const scriptURL = 'ใส่_URL_APPS_SCRIPT_อันใหม่ตรงนี้';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbzJV7Td3S0TCfkgSpWmM5YpFFyqklee0fNM3KSAlLHK4NU-wBxBMZ6jDrRfYcjzDO3EFA/exec';
 
         const loginForm = document.querySelector('.form');
         const submitBtn = document.querySelector('.submit');
@@ -58,7 +58,7 @@
                 const originalText = submitBtn.innerText;
                 submitBtn.innerText = 'กำลังตรวจสอบข้อมูล...';
                 submitBtn.disabled = true;
-                submitBtn.style.opacity = '0.7';
+                submitBtn.style.opacity = '0.4';
 
                 // เตรียมข้อมูลส่งไปให้ Apps Script
                 const formData = new FormData(loginForm);
@@ -71,29 +71,54 @@
                     return;
                 }
 
-                // ยิงข้อมูลไปถาม Google Sheets
+                // ตรวจสอบว่า user ใส่ scriptURL จริงหรือยัง
+                if (!scriptURL || scriptURL.includes('ใส่_URL')) {
+                    const msg = 'ยังไม่ได้ตั้งค่า scriptURL ของ Apps Script ใน Login.html';
+                    console.error(msg);
+                    if (window.Swal) Swal.fire({ icon: 'warning', text: msg, confirmButtonText: 'ตกลง' }); else alert(msg);
+                    submitBtn.innerText = originalText;
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    return;
+                }
+
+                // ยิงข้อมูลไปถาม Google Sheets (รองรับ response ทั้ง JSON และ text)
                 fetch(scriptURL, { method: 'POST', body: formData })
-                    .then(response => response.json()) // รับค่ากลับมาเป็น JSON
-                    .then(data => {
-                        if (data.status === 'success') {
-                            // ล็อกอินสำเร็จ เก็บข้อมูลชื่อลง sessionStorage
-                            sessionStorage.setItem('currentUser', JSON.stringify(data.user));
-                            
-                            // แจ้งเตือนสำเร็จ
-                            alert('เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับคุณ ' + (data.user.firstname || data.user.email));
-                            // ดีดไปหน้าจองห้อง
-                            window.location.href = 'index.html';
+                    .then(async response => {
+                        const ct = response.headers.get('content-type') || '';
+                        const text = await response.text();
+                        let data = null;
+                        if (ct.includes('application/json')) {
+                            try { data = JSON.parse(text); } catch (e) { throw new Error('Invalid JSON response: ' + text); }
                         } else {
-                            // รหัสหรืออีเมลผิด โชว์ข้อความที่หลังบ้านส่งมา
-                            alert('❌ ' + (data.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'));
+                            // พยายาม parse เป็น JSON ถ้าไม่สำเร็จ ให้ถือเป็นข้อความธรรมดา
+                            try { data = JSON.parse(text); } catch (e) { data = { status: 'error', message: text || ('HTTP ' + response.status) }; }
+                        }
+                        return { ok: response.ok, status: response.status, data };
+                    })
+                    .then(({ ok, status, data }) => {
+                        if (!ok) throw new Error('HTTP ' + status + ': ' + (data && data.message ? data.message : JSON.stringify(data)));
+                        if (data && data.status === 'success') {
+                            sessionStorage.setItem('currentUser', JSON.stringify(data.user));
+                            if (window.Swal) {
+                                Swal.fire({ icon: 'success', text: 'เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับคุณ ' + (data.user.firstname || data.user.email), confirmButtonText: 'ตกลง' })
+                                    .then(() => window.location.href = 'index.html');
+                            } else {
+                                alert('เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับคุณ ' + (data.user.firstname || data.user.email));
+                                window.location.href = 'index.html';
+                            }
+                        } else {
+                            const msg = (data && data.message) ? data.message : 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+                            if (window.Swal) Swal.fire({ icon: 'error', text: msg, confirmButtonText: 'ตกลง' }); else alert(msg);
                             submitBtn.innerText = originalText;
                             submitBtn.disabled = false;
                             submitBtn.style.opacity = '1';
                         }
                     })
                     .catch(error => {
-                        console.error('Error:', error);
-                        alert('❌ ระบบขัดข้อง ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
+                        console.error('Login fetch error:', error);
+                        const msg = '❌ ระบบขัดข้อง ไม่สามารถเชื่อมต่อฐานข้อมูลได้\n' + (error && error.message ? error.message : '');
+                        if (window.Swal) Swal.fire({ icon: 'error', text: msg, confirmButtonText: 'ตกลง' }); else alert(msg);
                         submitBtn.innerText = originalText;
                         submitBtn.disabled = false;
                         submitBtn.style.opacity = '1';
