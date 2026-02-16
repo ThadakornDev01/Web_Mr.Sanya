@@ -477,7 +477,7 @@ nextBtn.style.opacity = nextBtn.disabled ? "0.3" : "1";
           localStorage.setItem("isAdmin", "true");
           closeAdminLogin();
           alert("เข้าสู่ระบบ Admin สำเร็จ");
-          renderHistory();
+          window.location.href = "admin/index.html";
         } else {
           alert("รหัสผ่านไม่ถูกต้อง");
         }
